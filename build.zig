@@ -12,6 +12,18 @@ pub fn build(b: *std.Build) void {
     });
     b.installArtifact(lib);
 
+    const lib_check = b.addStaticLibrary(.{
+        .name = "cryptoz",
+        .root_source_file = b.path("src/cryptoz.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    // This is useful to get compilation diagnostics from zls.
+    // Article: https://kristoff.it/blog/improving-your-zls-experience/
+    const check = b.step("check", "Check if compilation is successful");
+    check.dependOn(&lib_check.step);
+
     // Creates a step for unit testing. This only builds the test executable
     // but does not run it.
     const lib_unit_tests = b.addTest(.{

@@ -14,6 +14,13 @@ const state_length = 5;
 // Starting state of the algorithm
 const default_initial_state = [state_length]u32{ 0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0 };
 
+fn schedule(w: *[16]u32, i: usize) void {
+    const tmp = w[(i - 3) & 0xf] ^ w[(i - 8) & 0xf] ^ w[(i - 14) & 0xf] ^ w[(i - 16) & 0xf];
+    // this left shift was added when SHA-0 was upgraded to SHA-1
+    // it was never publically announced why, just that it "fixed a security issue"
+    w[i & 0xf] = math.rotl(u32, tmp, 1);
+}
+
 /// Compitable interface with std crypto hashers
 /// in the context of the SHA1 paper they refer to a word size as 32bit, this can also be known as a dword when there is 16bit sizes
 pub const Sha1 = struct {
@@ -128,8 +135,7 @@ pub const Sha1 = struct {
         // In the below groups of 20 rounds the only thing that changes is the nonlinear function `f`.
         while (i < 20) : (i += 1) {
             if (i > 15) {
-                const tmp = w[(i - 3) & 0xf] ^ w[(i - 8) & 0xf] ^ w[(i - 14) & 0xf] ^ w[(i - 16) & 0xf];
-                w[i & 0xf] = math.rotl(u32, tmp, 1);
+                schedule(&w, i);
             }
 
             const f = (b & c) | (~b & d);
@@ -143,8 +149,7 @@ pub const Sha1 = struct {
         }
 
         while (i < 40) : (i += 1) {
-            const tmp = w[(i - 3) & 0xf] ^ w[(i - 8) & 0xf] ^ w[(i - 14) & 0xf] ^ w[(i - 16) & 0xf];
-            w[i & 0xf] = math.rotl(u32, tmp, 1);
+            schedule(&w, i);
 
             const f = b ^ c ^ d;
             const t = math.rotl(u32, a, 5) +% f +% e +% w[i & 0xf] +% k[1];
@@ -157,8 +162,7 @@ pub const Sha1 = struct {
         }
 
         while (i < 60) : (i += 1) {
-            const tmp = w[(i - 3) & 0xf] ^ w[(i - 8) & 0xf] ^ w[(i - 14) & 0xf] ^ w[(i - 16) & 0xf];
-            w[i & 0xf] = math.rotl(u32, tmp, 1);
+            schedule(&w, i);
 
             // alternative but equivalent expression for f()
             const f = (b & c) ^ (b & d) ^ (c & d);
@@ -172,8 +176,7 @@ pub const Sha1 = struct {
         }
 
         while (i < 80) : (i += 1) {
-            const tmp = w[(i - 3) & 0xf] ^ w[(i - 8) & 0xf] ^ w[(i - 14) & 0xf] ^ w[(i - 16) & 0xf];
-            w[i & 0xf] = math.rotl(u32, tmp, 1);
+            schedule(&w, i);
 
             const f = b ^ c ^ d;
             const t = math.rotl(u32, a, 5) +% f +% e +% w[i & 0xf] +% k[3];
