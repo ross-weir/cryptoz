@@ -196,33 +196,40 @@ pub const Sha1 = struct {
     }
 };
 
-const testing = std.testing;
-const fmt = std.fmt;
-
-// Hash using the specified hasher `H` asserting `expected == H(input)`.
-pub fn assertEqualHash(comptime Hasher: anytype, comptime expected_hex: *const [Hasher.digest_length * 2:0]u8, input: []const u8) !void {
-    var h: [Hasher.digest_length]u8 = undefined;
-    Hasher.hash(input, &h, .{});
-
-    try assertEqual(expected_hex, &h);
-}
-
-// Assert `expected` == hex(`input`) where `input` is a bytestring
-pub fn assertEqual(comptime expected_hex: [:0]const u8, input: []const u8) !void {
-    var expected_bytes: [expected_hex.len / 2]u8 = undefined;
-    for (&expected_bytes, 0..) |*r, i| {
-        r.* = fmt.parseInt(u8, expected_hex[2 * i .. 2 * i + 2], 16) catch unreachable;
-    }
-
-    try testing.expectEqualSlices(u8, &expected_bytes, input);
-}
-
-// have a restore method that allows restoring the state from an existing hash
-// this will allow us to try length extension attacks
-// explain how length ext attacks work & why certain outputs of SHA2 don't have the issue (because the truncate the output)
+const assertEqualHash = @import("./test.zig").assertEqualHash;
+const assertEqual = @import("./test.zig").assertEqual;
 
 test "sha1 basic" {
     try assertEqualHash(Sha1, "da39a3ee5e6b4b0d3255bfef95601890afd80709", "");
     try assertEqualHash(Sha1, "a9993e364706816aba3e25717850c26c9cd0d89d", "abc");
     try assertEqualHash(Sha1, "a49b2446a02c645bf419f995b67091253a04a259", "abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu");
+}
+
+test "sha1 streaming" {
+    var h = Sha1.init(.{});
+    var out: [20]u8 = undefined;
+
+    h.final(&out);
+    try assertEqual("da39a3ee5e6b4b0d3255bfef95601890afd80709", out[0..]);
+
+    h = Sha1.init(.{});
+    h.update("abc");
+    h.final(&out);
+    try assertEqual("a9993e364706816aba3e25717850c26c9cd0d89d", out[0..]);
+
+    h = Sha1.init(.{});
+    h.update("a");
+    h.update("b");
+    h.update("c");
+    h.final(&out);
+    try assertEqual("a9993e364706816aba3e25717850c26c9cd0d89d", out[0..]);
+}
+
+test "sha1 aligned final" {
+    var block = [_]u8{0} ** Sha1.block_length;
+    var out: [Sha1.digest_length]u8 = undefined;
+
+    var h = Sha1.init(.{});
+    h.update(&block);
+    h.final(out[0..]);
 }
