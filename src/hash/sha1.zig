@@ -121,7 +121,7 @@ pub const Sha1 = struct {
         var d = self.h[3];
         var e = self.h[4];
 
-        for (0..rounds) |i| {
+        inline for (0..rounds) |i| {
             var f: u32 = undefined;
             var t: u32 = undefined;
 

@@ -10,18 +10,18 @@ const default_initial_state = [state_length]u32{
     0x98badcfe,
     0x10325476,
 };
-const rounds = 64;
-// bit shift to apply at each round
-const shift = [rounds]u8{
-    7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22,
-    5, 9,  14, 20, 5, 9,  14, 20, 5, 9,  14, 20, 5, 9,  14, 20,
-    4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23,
-    6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21,
-};
-// Round constants
-const k = [rounds]u32{ 0xd76aa478, 0xe8c7b756, 0x242070db, 0xc1bdceee, 0xf57c0faf, 0x4787c62a, 0xa8304613, 0xfd469501, 0x698098d8, 0x8b44f7af, 0xffff5bb1, 0x895cd7be, 0x6b901122, 0xfd987193, 0xa679438e, 0x49b40821, 0xf61e2562, 0xc040b340, 0x265e5a51, 0xe9b6c7aa, 0xd62f105d, 0x02441453, 0xd8a1e681, 0xe7d3fbc8, 0x21e1cde6, 0xc33707d6, 0xf4d50d87, 0x455a14ed, 0xa9e3e905, 0xfcefa3f8, 0x676f02d9, 0x8d2a4c8a, 0xfffa3942, 0x8771f681, 0x6d9d6122, 0xfde5380c, 0xa4beea44, 0x4bdecfa9, 0xf6bb4b60, 0xbebfbc70, 0x289b7ec6, 0xeaa127fa, 0xd4ef3085, 0x04881d05, 0xd9d4d039, 0xe6db99e5, 0x1fa27cf8, 0xc4ac5665, 0xf4292244, 0x432aff97, 0xab9423a7, 0xfc93a039, 0x655b59c3, 0x8f0ccc92, 0xffeff47d, 0x85845dd1, 0x6fa87e4f, 0xfe2ce6e0, 0xa3014314, 0x4e0811a1, 0xf7537e82, 0xbd3af235, 0x2ad7d2bb, 0xeb86d391 };
+const rounds = 48;
 
-pub const Md5 = struct {
+const K2 = [_]u32{ 0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15 };
+const K3 = [_]u32{ 0, 8, 4, 12, 2, 10, 6, 14, 1, 9, 5, 13, 3, 11, 7, 15 };
+const S1 = [_]u5{ 3, 7, 11, 19, 3, 7, 11, 19, 3, 7, 11, 19, 3, 7, 11, 19 };
+const S2 = [_]u5{ 3, 5, 9, 13, 3, 5, 9, 13, 3, 5, 9, 13, 3, 5, 9, 13 };
+const S3 = [_]u5{ 3, 9, 11, 15, 3, 9, 11, 15, 3, 9, 11, 15, 3, 9, 11, 15 };
+
+// Historic and insecure crypograhpic hashing function.
+// Implmented for educational purposes.
+// DO NOT USE
+pub const Md4 = struct {
     const Self = @This();
     /// Length of each block of the message input in bytes.
     pub const block_length = 64;
@@ -68,7 +68,6 @@ pub const Md5 = struct {
         @memcpy(d.buf[d.buf_len..][0..b_slice.len], b_slice);
         d.buf_len += @as(u8, @intCast(b_slice.len));
 
-        // Md5 uses the bottom 64-bits for length padding
         d.total_len +%= b.len;
     }
 
@@ -87,9 +86,8 @@ pub const Md5 = struct {
         }
 
         // Append message length.
-        var i: usize = 1;
-        var len = d.total_len >> 5;
-        d.buf[56] = @as(u8, @intCast(d.total_len & 0x1f)) << 3;
+        var i: usize = 0;
+        var len = d.total_len << 3;
         while (i < 8) : (i += 1) {
             d.buf[56 + i] = @as(u8, @intCast(len & 0xff));
             len >>= 8;
@@ -106,7 +104,7 @@ pub const Md5 = struct {
         var w: [16]u32 = undefined;
 
         // divide the block into 16 words
-        // a word size in md5 is 32 bits
+        // a word size in md4 is 32 bits
         for (0..16) |i| {
             w[i] = mem.readInt(u32, block[i * 4 ..][0..4], .little);
         }
@@ -116,36 +114,30 @@ pub const Md5 = struct {
         var c = self.h[2];
         var d = self.h[3];
 
-        inline for (0..rounds) |round| {
-            var f: u32 = undefined;
-            var g: u32 = undefined;
-            const i: u32 = @intCast(round);
+        inline for (0..rounds) |i| {
+            var aa: u32 = undefined;
 
             switch (i) {
                 0...15 => {
-                    f = (b & c) | (~b & d);
-                    g = i;
+                    const f = (b & c) | (~b & d);
+                    aa = math.rotl(u32, a +% f +% w[i], S1[i]);
                 },
                 16...31 => {
-                    f = (d & b) | (~d & c);
-                    g = @mod(5 * i + 1, 16);
+                    const f = (b & c) | (b & d) | (c & d);
+                    aa = math.rotl(u32, a +% f +% w[K2[i & 0xf]] +% 0x5A827999, S2[i & 0xf]);
                 },
                 32...47 => {
-                    f = b ^ c ^ d;
-                    g = @mod(3 * i + 5, 16);
-                },
-                48...63 => {
-                    f = c ^ (b | ~d);
-                    g = @mod(7 * i, 16);
+                    const f = b ^ c ^ d;
+                    aa = math.rotl(u32, a +% f +% w[K3[i & 0xf]] +% 0x6ED9EBA1, S3[i & 0xf]);
                 },
                 else => {},
             }
 
-            f = f +% a +% k[i] +% w[g];
-            a = d;
+            const t = d;
             d = c;
             c = b;
-            b = b +% math.rotl(u32, f, shift[i]);
+            b = aa;
+            a = t;
         }
 
         self.h[0] +%= a;
@@ -158,41 +150,40 @@ pub const Md5 = struct {
 const htest = @import("test.zig");
 
 test "single" {
-    try htest.assertEqualHash(Md5, "d41d8cd98f00b204e9800998ecf8427e", "");
-    try htest.assertEqualHash(Md5, "0cc175b9c0f1b6a831c399e269772661", "a");
-    try htest.assertEqualHash(Md5, "900150983cd24fb0d6963f7d28e17f72", "abc");
-    try htest.assertEqualHash(Md5, "f96b697d7cb7938d525a2f31aaf161d0", "message digest");
-    try htest.assertEqualHash(Md5, "c3fcd3d76192e4007dfb496cca67e13b", "abcdefghijklmnopqrstuvwxyz");
-    try htest.assertEqualHash(Md5, "d174ab98d277d9f5a5611c2c9f419d9f", "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789");
-    try htest.assertEqualHash(Md5, "57edf4a22be3c955ac49da2e2107b67a", "12345678901234567890123456789012345678901234567890123456789012345678901234567890");
+    try htest.assertEqualHash(Md4, "31d6cfe0d16ae931b73c59d7e0c089c0", "");
+    try htest.assertEqualHash(Md4, "bde52cb31de33e46245e05fbdbd6fb24", "a");
+    try htest.assertEqualHash(Md4, "a448017aaf21d8525fc10ae87aa6729d", "abc");
+    try htest.assertEqualHash(Md4, "d9130a8164549fe818874806e1c7014b", "message digest");
+    try htest.assertEqualHash(Md4, "d79e1c308aa5bbcdeea8ed63df412da9", "abcdefghijklmnopqrstuvwxyz");
+    try htest.assertEqualHash(Md4, "043f8582f241db351ce627e153e7f0e4", "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789");
+    try htest.assertEqualHash(Md4, "e33b4ddc9c38f2199c3e7b164fcc0536", "12345678901234567890123456789012345678901234567890123456789012345678901234567890");
 }
 
 test "streaming" {
-    var h = Md5.init(.{});
+    var h = Md4.init(.{});
     var out: [16]u8 = undefined;
 
     h.final(out[0..]);
-    try htest.assertEqual("d41d8cd98f00b204e9800998ecf8427e", out[0..]);
+    try htest.assertEqual("31d6cfe0d16ae931b73c59d7e0c089c0", &out);
 
-    h = Md5.init(.{});
+    h = Md4.init(.{});
     h.update("abc");
     h.final(out[0..]);
-    try htest.assertEqual("900150983cd24fb0d6963f7d28e17f72", out[0..]);
+    try htest.assertEqual("a448017aaf21d8525fc10ae87aa6729d", &out);
 
-    h = Md5.init(.{});
+    h = Md4.init(.{});
     h.update("a");
     h.update("b");
     h.update("c");
     h.final(out[0..]);
-
-    try htest.assertEqual("900150983cd24fb0d6963f7d28e17f72", out[0..]);
+    try htest.assertEqual("a448017aaf21d8525fc10ae87aa6729d", &out);
 }
 
 test "aligned final" {
-    var block = [_]u8{0} ** Md5.block_length;
-    var out: [Md5.digest_length]u8 = undefined;
+    var block = [_]u8{0} ** Md4.block_length;
+    var out: [Md4.digest_length]u8 = undefined;
 
-    var h = Md5.init(.{});
+    var h = Md4.init(.{});
     h.update(&block);
     h.final(out[0..]);
 }
