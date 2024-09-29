@@ -9,10 +9,10 @@ const k = [4]u32{
     0x8f1bbcdc,
     0xca62c1d6,
 };
-
 const state_length = 5;
 // Starting state of the algorithm
 const default_initial_state = [state_length]u32{ 0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0 };
+const rounds = 80;
 
 fn schedule(w: *[16]u32, i: usize) void {
     const tmp = w[(i - 3) & 0xf] ^ w[(i - 8) & 0xf] ^ w[(i - 14) & 0xf] ^ w[(i - 16) & 0xf];
@@ -42,16 +42,8 @@ pub const Sha1 = struct {
         return Self{ .h = default_initial_state };
     }
 
-    /// Initialize the hasher with custom initial state.
-    /// This is useful for length extension attacks and not really anything else.
-    /// That's why this method is private, it's only expected to be used in test cases/experimentation.
-    fn restore(state: [state_length]u32, options: Options) Self {
-        _ = options;
-        return Self{ .h = state };
-    }
-
     pub fn hash(message: []const u8, digest_out: *[digest_length]u8, options: Options) void {
-        var hasher = Sha1.init(options);
+        var hasher = Self.init(options);
         hasher.update(message);
         hasher.final(digest_out);
     }
@@ -110,8 +102,6 @@ pub const Sha1 = struct {
         }
     }
 
-    // todo: add reset method
-
     // Note: lots of room for optimizations, prepation/message scheduling could be interlaced into the 80 rounds
     // to prevent duplicate loops.
     //
@@ -130,56 +120,35 @@ pub const Sha1 = struct {
         var c = self.h[2];
         var d = self.h[3];
         var e = self.h[4];
-        var i: usize = 0;
 
-        // In the below groups of 20 rounds the only thing that changes is the nonlinear function `f`.
-        while (i < 20) : (i += 1) {
+        for (0..rounds) |i| {
+            var f: u32 = undefined;
+            var t: u32 = undefined;
+
             if (i > 15) {
                 schedule(&w, i);
             }
 
-            const f = (b & c) | (~b & d);
-            const t = math.rotl(u32, a, 5) +% f +% e +% w[i & 0xf] +% k[0];
-
-            e = d;
-            d = c;
-            c = math.rotl(u32, b, 30);
-            b = a;
-            a = t;
-        }
-
-        while (i < 40) : (i += 1) {
-            schedule(&w, i);
-
-            const f = b ^ c ^ d;
-            const t = math.rotl(u32, a, 5) +% f +% e +% w[i & 0xf] +% k[1];
-
-            e = d;
-            d = c;
-            c = math.rotl(u32, b, 30);
-            b = a;
-            a = t;
-        }
-
-        while (i < 60) : (i += 1) {
-            schedule(&w, i);
-
-            // alternative but equivalent expression for f()
-            const f = (b & c) ^ (b & d) ^ (c & d);
-            const t = math.rotl(u32, a, 5) +% f +% e +% w[i & 0xf] +% k[2];
-
-            e = d;
-            d = c;
-            c = math.rotl(u32, b, 30);
-            b = a;
-            a = t;
-        }
-
-        while (i < 80) : (i += 1) {
-            schedule(&w, i);
-
-            const f = b ^ c ^ d;
-            const t = math.rotl(u32, a, 5) +% f +% e +% w[i & 0xf] +% k[3];
+            switch (i) {
+                0...19 => {
+                    f = (b & c) | (~b & d);
+                    t = math.rotl(u32, a, 5) +% f +% e +% w[i & 0xf] +% k[0];
+                },
+                20...39 => {
+                    f = b ^ c ^ d;
+                    t = math.rotl(u32, a, 5) +% f +% e +% w[i & 0xf] +% k[1];
+                },
+                40...59 => {
+                    // alternative but equivalent expression for f()
+                    f = (b & c) ^ (b & d) ^ (c & d);
+                    t = math.rotl(u32, a, 5) +% f +% e +% w[i & 0xf] +% k[2];
+                },
+                60...79 => {
+                    f = b ^ c ^ d;
+                    t = math.rotl(u32, a, 5) +% f +% e +% w[i & 0xf] +% k[3];
+                },
+                else => {},
+            }
 
             e = d;
             d = c;
