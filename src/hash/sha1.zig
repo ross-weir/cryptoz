@@ -11,7 +11,7 @@ const k = [4]u32{
 };
 const state_length = 5;
 // Starting state of the algorithm
-const default_initial_state = [state_length]u32{ 0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0 };
+const iv = [state_length]u32{ 0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0 };
 const rounds = 80;
 
 fn schedule(w: *[16]u32, i: usize) void {
@@ -39,7 +39,7 @@ pub const Sha1 = struct {
 
     pub fn init(options: Options) Self {
         _ = options;
-        return Self{ .h = default_initial_state };
+        return Self{ .h = iv };
     }
 
     pub fn hash(message: []const u8, digest_out: *[digest_length]u8, options: Options) void {

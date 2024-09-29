@@ -4,7 +4,7 @@ const math = std.math;
 
 const state_length = 4;
 // Starting state of the working variables in the algorithm
-const default_initial_state = [state_length]u32{
+const iv = [state_length]u32{
     0x67452301,
     0xefcdab89,
     0x98badcfe,
@@ -37,7 +37,7 @@ pub const Md4 = struct {
 
     pub fn init(options: Options) Self {
         _ = options;
-        return Self{ .h = default_initial_state };
+        return Self{ .h = iv };
     }
 
     pub fn hash(message: []const u8, digest_out: *[digest_length]u8, options: Options) void {
