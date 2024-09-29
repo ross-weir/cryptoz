@@ -115,29 +115,28 @@ pub const Md4 = struct {
         var d = self.h[3];
 
         inline for (0..rounds) |i| {
-            var aa: u32 = undefined;
+            var t: u32 = undefined;
 
             switch (i) {
                 0...15 => {
                     const f = (b & c) | (~b & d);
-                    aa = math.rotl(u32, a +% f +% w[i], S1[i]);
+                    t = math.rotl(u32, a +% f +% w[i], S1[i]);
                 },
                 16...31 => {
                     const f = (b & c) | (b & d) | (c & d);
-                    aa = math.rotl(u32, a +% f +% w[K2[i & 0xf]] +% 0x5A827999, S2[i & 0xf]);
+                    t = math.rotl(u32, a +% f +% w[K2[i & 0xf]] +% 0x5A827999, S2[i & 0xf]);
                 },
                 32...47 => {
                     const f = b ^ c ^ d;
-                    aa = math.rotl(u32, a +% f +% w[K3[i & 0xf]] +% 0x6ED9EBA1, S3[i & 0xf]);
+                    t = math.rotl(u32, a +% f +% w[K3[i & 0xf]] +% 0x6ED9EBA1, S3[i & 0xf]);
                 },
                 else => {},
             }
 
-            const t = d;
+            a = d;
             d = c;
             c = b;
-            b = aa;
-            a = t;
+            b = t;
         }
 
         self.h[0] +%= a;
@@ -187,3 +186,4 @@ test "aligned final" {
     h.update(&block);
     h.final(out[0..]);
 }
+
