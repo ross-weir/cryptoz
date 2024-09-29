@@ -42,16 +42,8 @@ pub const Sha1 = struct {
         return Self{ .h = default_initial_state };
     }
 
-    /// Initialize the hasher with custom initial state.
-    /// This is useful for length extension attacks and not really anything else.
-    /// That's why this method is private, it's only expected to be used in test cases/experimentation.
-    fn restore(state: [state_length]u32, options: Options) Self {
-        _ = options;
-        return Self{ .h = state };
-    }
-
     pub fn hash(message: []const u8, digest_out: *[digest_length]u8, options: Options) void {
-        var hasher = Sha1.init(options);
+        var hasher = Self.init(options);
         hasher.update(message);
         hasher.final(digest_out);
     }
