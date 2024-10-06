@@ -8,7 +8,7 @@ const iv = [state_length]u32{ 0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476 };
 const rounds = 64;
 
 const k = [4]u32{ 0x00000000, 0x5a827999, 0x6ed9eba1, 0x8f1bbcdc };
-const k_p = [4]u32{ 0x50a28Be6, 0x5c4dd124, 0x6d703ef3, 0x00000000 };
+const k_p = [4]u32{ 0x50a28be6, 0x5c4dd124, 0x6d703ef3, 0x00000000 };
 
 const x = [rounds]u32{
     0, 1,  2,  3,  4,  5,  6,  7, 8,  9, 10, 11, 12, 13, 14, 15,
@@ -103,8 +103,9 @@ pub const Ripemd128 = struct {
         }
 
         // Append message length.
-        var i: usize = 0;
-        var len = d.total_len << 3;
+        var i: usize = 1;
+        var len = d.total_len >> 5;
+        d.buf[56] = @as(u8, @intCast(d.total_len & 0x1f)) << 3;
         while (i < 8) : (i += 1) {
             d.buf[56 + i] = @as(u8, @intCast(len & 0xff));
             len >>= 8;
@@ -193,8 +194,8 @@ pub const Ripemd128 = struct {
 const htest = @import("test.zig");
 
 test "single" {
-    try htest.assertEqualHash(Ripemd128, "cdf26213a150dc3ecb610f18f6b38b46", "");
-    // try htest.assertEqualHash(Ripemd128, "86be7afa339d0fc7cfc785e72f578d33", "a");
+    // try htest.assertEqualHash(Ripemd128, "cdf26213a150dc3ecb610f18f6b38b46", "");
+    try htest.assertEqualHash(Ripemd128, "86be7afa339d0fc7cfc785e72f578d33", "a");
     // try htest.assertEqualHash(Ripemd128, "c14a12199c66e4ba84636b0f69144c77", "abc");
     // try htest.assertEqualHash(Ripemd128, "9e327b3d6e523062afc1132d7df9d1b8", "message digest");
     // try htest.assertEqualHash(Ripemd128, "fd2aa607f71dc8f510714922b371834e", "abcdefghijklmnopqrstuvwxyz");
