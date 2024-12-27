@@ -166,7 +166,7 @@ pub const Ripemd128 = struct {
                 48...63 => {
                     const k_idx = 3;
 
-                    f = a +% ((b & c) | (c & ~d)) +% w[x[i]] +% k[k_idx];
+                    f = a +% ((b & d) | (c & ~d)) +% w[x[i]] +% k[k_idx];
                     f_p = aa +% (bb ^ cc ^ dd) +% w[x_p[i]] +% k_p[k_idx];
                 },
                 else => {},
@@ -194,11 +194,11 @@ pub const Ripemd128 = struct {
 const htest = @import("test.zig");
 
 test "single" {
-    // try htest.assertEqualHash(Ripemd128, "cdf26213a150dc3ecb610f18f6b38b46", "");
+    try htest.assertEqualHash(Ripemd128, "cdf26213a150dc3ecb610f18f6b38b46", "");
     try htest.assertEqualHash(Ripemd128, "86be7afa339d0fc7cfc785e72f578d33", "a");
-    // try htest.assertEqualHash(Ripemd128, "c14a12199c66e4ba84636b0f69144c77", "abc");
-    // try htest.assertEqualHash(Ripemd128, "9e327b3d6e523062afc1132d7df9d1b8", "message digest");
-    // try htest.assertEqualHash(Ripemd128, "fd2aa607f71dc8f510714922b371834e", "abcdefghijklmnopqrstuvwxyz");
-    // try htest.assertEqualHash(Ripemd128, "a1aa0689d0fafa2ddc22e88b49133a06", "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq");
-    // try htest.assertEqualHash(Ripemd128, "d1e959eb179c911faea4624c60c5c702", "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789");
+    try htest.assertEqualHash(Ripemd128, "c14a12199c66e4ba84636b0f69144c77", "abc");
+    try htest.assertEqualHash(Ripemd128, "9e327b3d6e523062afc1132d7df9d1b8", "message digest");
+    try htest.assertEqualHash(Ripemd128, "fd2aa607f71dc8f510714922b371834e", "abcdefghijklmnopqrstuvwxyz");
+    try htest.assertEqualHash(Ripemd128, "a1aa0689d0fafa2ddc22e88b49133a06", "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq");
+    try htest.assertEqualHash(Ripemd128, "d1e959eb179c911faea4624c60c5c702", "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789");
 }
